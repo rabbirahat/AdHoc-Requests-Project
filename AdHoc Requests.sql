@@ -1,41 +1,46 @@
 
 -- 1. Provide the list of markets in which customer "Atliq Exclusive" operates its business in the APAC region.
 
-select * from dim_customer;
+SELECT * FROM dim_customer;
 
-select distinct market
-from dim_customer
-where customer = 'Atliq Exclusive' and region ='APAC';
+SELECT DISTINCT market
+FROM dim_customer
+WHERE customer = 'Atliq Exclusive' AND region ='APAC';
 
 -- 2. What is the percentage of unique product increase in 2021 vs. 2020? The
 -- final output contains these fields,
---                       unique_products_2020
--- 						 unique_products_2021
--- 						 percentage_chg
+--                  unique_products_2020
+-- 					unique_products_2021
+-- 					percentage_chg
 
-select count(distinct product_code) as unique_products_2021 from fact_sales_monthly
-where fiscal_year = 2021;
+SELECT count(DISTINCT product_code) AS unique_products_2021 
+FROM fact_sales_monthly
+WHERE fiscal_year = 2021;
 
-select count(distinct product_code) as unique_products_2020 from fact_sales_monthly
-where fiscal_year = 2020;
+SELECT count(DISTINCT product_code) AS unique_products_2020 
+FROM fact_sales_monthly
+WHERE fiscal_year = 2020;
 
-with cte1 as (
-select count(distinct product_code) as unique_products_2021 from fact_sales_monthly
-where fiscal_year = 2021
+WITH cte1 AS (
+	SELECT count(DISTINCT product_code) AS unique_products_2021 
+    FROM fact_sales_monthly
+	WHERE fiscal_year = 2021
 ),
 
-cte2 as (
-select count(distinct product_code) as unique_products_2020 from fact_sales_monthly
-where fiscal_year = 2020
+cte2 AS (
+	SELECT count(DISTINCT product_code) AS unique_products_2020 
+    FROM fact_sales_monthly
+	WHERE fiscal_year = 2020
 ),
-cte3 as (
-select unique_products_2021, unique_products_2020
-from cte1
-cross join cte2
+
+cte3 AS (
+	SELECT unique_products_2021, unique_products_2020
+	FROM cte1
+	CROSS JOIN cte2
 )
 
-select *, round(((unique_products_2021 - unique_products_2020)/unique_products_2020)*100, 2) as PCT_CHANG 
-from cte3;
+SELECT *, round(((unique_products_2021 - unique_products_2020)/unique_products_2020)*100, 2) AS percentage_chg 
+FROM cte3;
 
 -- (334 - 245)/ 245 = 0.3633 == 36.33 %
 
@@ -44,11 +49,11 @@ from cte3;
 --               segment
 --               product_count
 
-select segment, 
-			count(product_code) as product_count
-			from dim_product
-			group by segment
-            order by product_count desc;
+SELECT segment, 
+		count(DISTINCT product_code) AS product_count
+		FROM dim_product
+		GROUP BY segment
+		ORDER BY product_count DESC;
 
 
 -- 4. Follow-up: Which segment had the most increase in unique products in
@@ -59,25 +64,27 @@ select segment,
 -- 				difference
 
 
-select count(distinct product_code) as unique_products_2021 from fact_sales_monthly
-where fiscal_year = 2021;
+SELECT count(DISTINCT product_code) AS unique_products_2021 
+FROM fact_sales_monthly
+WHERE fiscal_year = 2021;
 
-select count(distinct product_code) as unique_products_2020 from fact_sales_monthly
-where fiscal_year = 2020;
+SELECT count(DISTINCT product_code) AS unique_products_2020 
+FROM fact_sales_monthly
+WHERE fiscal_year = 2020;
 
-select	
+SELECT	
 	p.segment,
-	count(distinct case when S.fiscal_year = 2020 then S.product_code end) as product_count_2020, 
-    count(distinct case when S.fiscal_year = 2021 then S.product_code end) as product_count_2021,
+	count(DISTINCT CASE WHEN S.fiscal_year = 2020 THEN S.product_code END) AS product_count_2020, 
+    count(DISTINCT CASE WHEN S.fiscal_year = 2021 THEN S.product_code END) AS product_count_2021,
 
-	(count(distinct case when S.fiscal_year = 2021 then S.product_code end)-
-    count(distinct case when S.fiscal_year = 2020 then S.product_code end)) as difference
+	(count(DISTINCT CASE WHEN S.fiscal_year = 2021 THEN S.product_code END)-
+    count(DISTINCT CASE WHEN S.fiscal_year = 2020 THEN S.product_code END)) AS difference
     
-from dim_product as p
-left join fact_sales_monthly as S on p.product_code = S.product_code
-where S.fiscal_year in (2020, 2021)
-group by p.segment
-order by difference desc;
+FROM dim_product AS p
+LEFT JOIN fact_sales_monthly AS S ON p.product_code = S.product_code
+WHERE S.fiscal_year IN (2020, 2021)
+GROUP BY p.segment
+ORDER BY difference DESC;
 
 
 -- 5. Get the products that have the highest and lowest manufacturing costs.The final output should contain these fields,
@@ -85,19 +92,19 @@ order by difference desc;
 -- 				product
 -- 				manufacturing_cost
 
-select p.product_code, p.product, f.manufacturing_cost
-from dim_product as p
-left join fact_manufacturing_cost as f on p.product_code = f.product_code
-where manufacturing_cost = (select max(manufacturing_cost) 
-								from fact_manufacturing_cost)
+SELECT p.product_code, p.product, f.manufacturing_cost
+FROM dim_product AS p
+LEFT JOIN fact_manufacturing_cost AS f ON p.product_code = f.product_code
+WHERE manufacturing_cost = (SELECT max(manufacturing_cost) 
+							FROM fact_manufacturing_cost)
 
 UNION
 
-select p.product_code, p.product, f.manufacturing_cost
-from dim_product as p
-left join fact_manufacturing_cost as f on p.product_code = f.product_code
-where manufacturing_cost = (select min(manufacturing_cost) 
-								from fact_manufacturing_cost);
+SELECT p.product_code, p.product, f.manufacturing_cost
+FROM dim_product AS p
+LEFT JOIN fact_manufacturing_cost AS f ON p.product_code = f.product_code
+WHERE manufacturing_cost = (SELECT min(manufacturing_cost) 
+							FROM fact_manufacturing_cost);
                                 
 
 -- 6. Generate a report which contains the top 5 customers who received an
@@ -108,31 +115,31 @@ where manufacturing_cost = (select min(manufacturing_cost)
 --  		average_discount_percentage
                                 
 
-with cte1 as (
-		select a.customer_code, a.customer, a.market, b.fiscal_year, b.pre_invoice_discount_pct
-        from dim_customer as a
-        join fact_pre_invoice_deductions as b
-        on a.customer_code = b.customer_code
+WITH cte1 AS (
+		SELECT a.customer_code, a.customer, a.market, b.fiscal_year, b.pre_invoice_discount_pct
+        FROM dim_customer AS a
+        JOIN fact_pre_invoice_deductions AS b
+        ON a.customer_code = b.customer_code
 ),
 cte2 as (
-		select
+		SELECT
 			customer_code,
 			customer,
 			market,
 			fiscal_year,
-            avg(pre_invoice_discount_pct) as average_discount_pct
-        from
+            avg(pre_invoice_discount_pct) AS average_discount_pct
+        FROM
 			cte1
-        where
-			fiscal_year = 2021 and market = 'India'
-        group by
+        WHERE
+			fiscal_year = 2021 AND market = 'India'
+        GROUP BY
 			customer_code, customer, market, fiscal_year
 )
 
-select customer_code, customer,round(average_discount_pct*100,2) as average_discount_pct
-from cte2
-order by average_discount_pct desc
-limit 5;
+SELECT customer_code, customer,round(average_discount_pct*100,2) AS average_discount_pct
+FROM cte2
+ORDER BY average_discount_pct DESC
+LIMIT 5;
 
 
 -- 7. Get the complete report of the Gross sales amount for the customer “Atliq
@@ -145,25 +152,25 @@ limit 5;
 
 -- Gross sales = Price * sold_quantity
 
-with cte1 as (
-	select a.customer_code, a.customer, b.date, b.product_code, b.fiscal_year, b.sold_quantity
-    from dim_customer as a
-    join fact_sales_monthly as b
-    on a.customer_code = b.customer_code
-    where a.customer = 'Atliq Exclusive'
+WITH cte1 AS (
+	SELECT a.customer_code, a.customer, b.date, b.product_code, b.fiscal_year, b.sold_quantity
+    FROM dim_customer AS a
+    JOIN fact_sales_monthly AS b
+    ON a.customer_code = b.customer_code
+    WHERE a.customer = 'Atliq Exclusive'
 ),
-cte2 as (
-	select a.customer_code, a.customer, a.date, a.product_code, a.fiscal_year, a.sold_quantity, b.gross_price 
-	from cte1 as a 
-	join fact_gross_price as b
-	on a.product_code = b.product_code
+cte2 AS (
+	SELECT a.customer_code, a.customer, a.date, a.product_code, a.fiscal_year, a.sold_quantity, b.gross_price 
+	FROM cte1 AS a 
+	JOIN fact_gross_price AS b
+	ON a.product_code = b.product_code
 )
-select monthname(date) as Month,
-	   fiscal_year as Year,
-	   round(sum(sold_quantity * gross_price)/1000000, 2) as gross_sales_amt,
-       'Millions' as Unit
-       from cte2
-       group by monthname(date), fiscal_year;
+SELECT monthname(date) AS Month,
+	   fiscal_year AS Year,
+	   round(sum(sold_quantity * gross_price)/1000000, 2) AS gross_sales_amt,
+       'Millions' AS Unit
+       FROM cte2
+       GROUP BY monthname(date), fiscal_year;
         
 
 -- 8. In which quarter of 2020, got the maximum total_sold_quantity? The final
@@ -176,20 +183,20 @@ select monthname(date) as Month,
 -- , Mar to May will be my 3rd quarter
 -- , Jun to Aug will be my 4th quarter
 
-select * from fact_sales_monthly
-where fiscal_year in (2020,2021);
+SELECT * FROM fact_sales_monthly
+WHERE fiscal_year IN (2020,2021);
 
-select case
-			when date between '2019-09-01' and '2019-11-01' then 1
-            when date between '2019-12-01' and '2020-02-01' then 2
-            when date between '2020-03-01' and '2020-05-01' then 3
-            when date between '2020-06-01' and '2020-08-01' then 4
-            end as Quarters,
-            format(sum(sold_quantity), 0) as total_sold_quantity
-            from fact_sales_monthly
-            where fiscal_year = 2020
-            group by Quarters
-            order by total_sold_quantity desc;
+SELECT CASE
+			WHEN date BETWEEN '2019-09-01' AND '2019-11-01' THEN 1
+            WHEN date BETWEEN '2019-12-01' AND '2020-02-01' THEN 2
+            WHEN date BETWEEN '2020-03-01' AND '2020-05-01' THEN 3
+            WHEN date BETWEEN '2020-06-01' AND '2020-08-01' THEN 4
+            END AS Quarters,
+            format(sum(sold_quantity), 0) AS total_sold_quantity
+            FROM fact_sales_monthly
+            WHERE fiscal_year = 2020
+            GROUP BY Quarters
+            ORDER BY total_sold_quantity DESC;
 
 
 -- 9. Which channel helped to bring more gross sales in the fiscal year 2021
@@ -197,35 +204,66 @@ select case
 
 -- pct contribution = (gross sales mon / total sales) * 100 
 
-with cte1 as (
-	select a.channel,
+WITH cte1 AS (
+	SELECT a.channel,
 			b.product_code,
             b.fiscal_year,
             b.sold_quantity
-    from dim_customer as a
-    join fact_sales_monthly as b
-    on a.customer_code = b.customer_code
-    where fiscal_year = 2021
+    FROM dim_customer AS a
+    JOIN fact_sales_monthly AS b
+    ON a.customer_code = b.customer_code
+    WHERE fiscal_year = 2021
 ),
-cte2 as (
-select a.channel, a.product_code, a.sold_quantity, b.gross_price
-from cte1 as a
-join fact_gross_price as b
-on a.product_code = b.product_code
+
+cte2 AS (
+	SELECT a.channel, a.product_code, a.sold_quantity, b.gross_price
+	FROM cte1 AS a
+	JOIN fact_gross_price AS b
+	ON a.product_code = b.product_code
 ),
-cte3 as (
-select channel, product_code,
-round(sum(sold_quantity * gross_price)/1000000, 2) as gross_sales_mln
-from cte2
-group by channel, product_code
+
+cte3 AS (
+	SELECT channel,
+	round(sum(sold_quantity * gross_price)/1000000, 2) AS gross_sales_mln
+	FROM cte2
+	GROUP BY channel
 )
 
-select channel, gross_sales_mln,
-round((gross_sales_mln/total_sales)*100, 2) as pct_contrib
-from cte3,
-(select sum(gross_sales_mln) as total_sales from cte3) as total
-order by gross_sales_mln desc;
+SELECT channel, gross_sales_mln, round((gross_sales_mln/total_sales)*100, 2) AS pct_contrib
+FROM cte3, (SELECT sum(gross_sales_mln) AS total_sales FROM cte3) AS total
+ORDER BY gross_sales_mln DESC;
 
+-- 10. Get the Top 3 products in each division that have a high
+-- total_sold_quantity in the fiscal_year 2021? The final output contains these fields,
+-- 			division
+-- 			product_code
+-- 			product
+-- 			total_sold_quantity
+-- 			rank_order
+
+WITH cte1 AS (
+	SELECT 
+		a.division,
+        a.product_code,
+        a.product,
+        sum(b.sold_quantity) AS total_sold_quantity
+	FROM dim_product AS a
+	JOIN fact_sales_monthly AS b
+	ON a.product_code = b.product_code
+    WHERE b.fiscal_year = 2021
+    GROUP BY a.division, a.product_code, a.product
+),
+
+-- I need to show 3 top products per division, top products will be based on total sold quantity
+
+cte2 AS (
+	SELECT *,
+		rank() OVER (PARTITION BY division ORDER BY total_sold_quantity DESC) as `rank`
+        FROM cte1
+) 
+
+SELECT * FROM cte2
+WHERE `rank` <= 3;
 
 
 
